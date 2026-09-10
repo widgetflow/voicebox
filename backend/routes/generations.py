@@ -2,10 +2,11 @@
 
 import asyncio
 import logging
+import os
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -319,6 +320,7 @@ async def get_generation_status(generation_id: str, db: Session = Depends(get_db
 async def stream_speech(
     data: models.GenerationRequest,
     db: Session = Depends(get_db),
+    x_voicebox_qwen_x_vector_only: str | None = Header(default=None),
 ):
     """Generate speech and stream the WAV audio directly without saving to disk."""
     from ..backends import (
@@ -328,6 +330,10 @@ async def stream_speech(
         get_tts_backend_for_engine,
         load_engine_model,
     )
+
+    x_vector_only = os.environ.get("VOICEBOX_QWEN_X_VECTOR_ONLY", "").strip().lower() in {"1", "true", "yes"}
+    if x_voicebox_qwen_x_vector_only == "required" and not x_vector_only:
+        raise HTTPException(status_code=409, detail="Qwen x-vector-only mode is required but not enabled")
 
     profile = await profiles.get_profile(data.profile_id, db)
     if not profile:
@@ -410,7 +416,10 @@ async def stream_speech(
     return StreamingResponse(
         _wav_stream(),
         media_type="audio/wav",
-        headers={"Content-Disposition": 'attachment; filename="speech.wav"'},
+        headers={
+            "Content-Disposition": 'attachment; filename="speech.wav"',
+            "X-Voicebox-Qwen-X-Vector-Only": "true" if x_vector_only else "false",
+        },
     )
 
 
