@@ -5,6 +5,7 @@ PyTorch backend implementation for TTS and STT.
 from typing import Optional, List, Tuple
 import asyncio
 import logging
+import os
 import torch
 import numpy as np
 
@@ -176,10 +177,11 @@ class PyTorchTTSBackend:
             # state. Forcing offline here (issue #462) regressed online
             # users whose libraries issue legitimate metadata lookups
             # during voice-prompt creation.
+            x_vector_only = os.environ.get("VOICEBOX_QWEN_X_VECTOR_ONLY", "").strip().lower() in {"1", "true", "yes"}
             return self.model.create_voice_clone_prompt(
                 ref_audio=str(audio_path),
                 ref_text=reference_text,
-                x_vector_only_mode=False,
+                x_vector_only_mode=x_vector_only,
             )
 
         # Run blocking operation in thread pool
