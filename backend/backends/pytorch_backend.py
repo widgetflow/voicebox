@@ -109,8 +109,8 @@ class PyTorchTTSBackend:
                 self.model = Qwen3TTSModel.from_pretrained(
                     model_path,
                     cache_dir=tts_cache_dir,
-                    torch_dtype=torch.float32,
-                    low_cpu_mem_usage=False,
+                    dtype=torch.bfloat16,
+                    low_cpu_mem_usage=True,
                 )
             else:
                 self.model = Qwen3TTSModel.from_pretrained(
